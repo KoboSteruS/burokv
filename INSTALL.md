@@ -17,7 +17,7 @@
 python -m venv venv
 
 # Активация
-venv\Scripts\activate
+source venv/bin/activate
 
 # Установка зависимостей
 pip install -r requirements.txt

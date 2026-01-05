@@ -39,7 +39,10 @@ class Command(BaseCommand):
             'iat': datetime.utcnow()
         }
         
+        # PyJWT версии 2.x возвращает строку, версии 3.x - bytes
         token = jwt.encode(payload, jwt_secret, algorithm='HS256')
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
         
         self.stdout.write(self.style.SUCCESS('\n' + '='*60))
         self.stdout.write(self.style.SUCCESS('JWT токен для админ-панели сгенерирован!'))
