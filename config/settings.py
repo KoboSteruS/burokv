@@ -30,6 +30,18 @@ DEBUG = config('DEBUG', default='True', cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in str(v).split(',')] if v else [])
 
+# Security settings для production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default='True', cast=bool)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -84,6 +96,15 @@ DATABASES = {
     }
 }
 
+# Если есть DATABASE_URL, используем его (для production с PostgreSQL)
+database_url = config('DATABASE_URL', default=None)
+if database_url:
+    try:
+        import dj_database_url
+        DATABASES['default'] = dj_database_url.parse(database_url, conn_max_age=600)
+    except ImportError:
+        pass  # dj-database-url не установлен
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -112,6 +133,16 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# WhiteNoise для обслуживания статических файлов в production
+if not DEBUG:
+    try:
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        # Вставляем WhiteNoise после SecurityMiddleware
+        if 'whitenoise.middleware.WhiteNoiseMiddleware' not in MIDDLEWARE:
+            MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    except ImportError:
+        pass  # WhiteNoise не установлен, используем стандартную обработку
 
 # Media files
 MEDIA_URL = '/media/'
