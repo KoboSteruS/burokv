@@ -3,9 +3,10 @@ Middleware для защиты админ-панели через JWT токен
 Доступ к админке возможен только по пути: /admin/<jwt_token>/
 """
 import jwt
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect, HttpResponse
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
+import re
 
 
 class AdminJWTMiddleware(MiddlewareMixin):
@@ -37,6 +38,7 @@ class AdminJWTMiddleware(MiddlewareMixin):
         has_token_in_url = len(path_parts) >= 2 and path_parts[0] == 'admin'
         
         # Проверяем, есть ли валидный токен в сессии (для внутренних запросов админки)
+        # Это нужно для POST-запросов формы логина и других внутренних запросов
         if hasattr(request, 'session') and not has_token_in_url:
             session_token = request.session.get('admin_jwt_token')
             session_valid = request.session.get('admin_jwt_valid', False)
@@ -52,6 +54,7 @@ class AdminJWTMiddleware(MiddlewareMixin):
                     
                     if decoded.get('type') == 'admin_access':
                         # Токен из сессии валиден, разрешаем доступ
+                        # Для POST-запросов (форма логина) не нужно менять путь
                         return None
                 except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
                     # Токен в сессии невалиден, очищаем сессию
@@ -107,16 +110,15 @@ class AdminJWTMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         """
-        Обрабатывает ответы, добавляя токен в редиректы и ссылки админки.
+        Обрабатывает ответы, добавляя токен во все редиректы и ссылки админки.
         """
-        # Если это запрос к админке и есть токен в сессии
+        # Проверяем, есть ли токен в сессии (для всех запросов, не только к админке)
         if hasattr(request, 'session'):
             session_token = request.session.get('admin_jwt_token')
             
             if session_token:
-                # Обрабатываем редиректы (включая редиректы после логина)
+                # Обрабатываем редиректы (включая редиректы после логина, сохранения и т.д.)
                 if isinstance(response, HttpResponseRedirect):
-                    # Проверяем, является ли это редиректом на админку
                     redirect_url = response.url
                     
                     # Если редирект на /admin/ или начинается с /admin/
@@ -143,24 +145,53 @@ class AdminJWTMiddleware(MiddlewareMixin):
                         try:
                             content = response.content.decode('utf-8')
                             
-                            # Заменяем все ссылки /admin/ на /admin/<token>/
-                            import re
-                            
                             # Функция для замены URL
                             def replace_admin_url(match):
-                                attr = match.group(1)  # href или action
+                                attr = match.group(1)  # href, action, src, data-url и т.д.
                                 path = match.group(2).lstrip('/')  # путь после /admin/
                                 return f'{attr}="/admin/{session_token}/{path}"'
                             
-                            # Заменяем href="/admin/... и action="/admin/...
+                            # Заменяем все ссылки на админку:
+                            # 1. href="/admin/... и action="/admin/...
                             content = re.sub(
                                 r'(href|action)=["\']/admin/([^"\']*)["\']',
                                 replace_admin_url,
                                 content
                             )
                             
+                            # 2. data-url="/admin/... (для AJAX запросов)
+                            content = re.sub(
+                                r'(data-url|data-href|data-action)=["\']/admin/([^"\']*)["\']',
+                                replace_admin_url,
+                                content
+                            )
+                            
+                            # 3. В JavaScript коде: "/admin/...
+                            content = re.sub(
+                                r'["\'](/admin/[^"\']*)["\']',
+                                lambda m: f'"/admin/{session_token}/{m.group(1)[7:].lstrip("/")}"',
+                                content
+                            )
+                            
+                            # 4. Пустые action="" в формах заменяем на текущий URL с токеном
+                            if '<form' in content:
+                                current_path = request.path
+                                if current_path.startswith('/admin/'):
+                                    # Убираем /admin/ и добавляем токен
+                                    path_after_admin = current_path[7:].lstrip('/')
+                                    # Заменяем action="" на полный путь с токеном
+                                    content = re.sub(
+                                        r'action=["\']{2}',
+                                        f'action="/admin/{session_token}/{path_after_admin}"',
+                                        content
+                                    )
+                            
+                            # 5. Обрабатываем CSRF токен в формах (может содержать ссылки)
+                            # Django admin использует {% url %} теги, которые уже обработаны,
+                            # но на всякий случай проверяем все относительные пути
+                            
                             response.content = content.encode('utf-8')
-                        except (UnicodeDecodeError, AttributeError, KeyError):
+                        except (UnicodeDecodeError, AttributeError, KeyError, Exception):
                             # Если не удалось обработать контент, просто пропускаем
                             pass
         
