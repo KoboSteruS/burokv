@@ -1428,7 +1428,6 @@ body {
     }
     
     .hero__image {
-        min-height: 400px;
         display: none;
     }
     
@@ -1565,6 +1564,10 @@ body {
     
     .hero__subtitle p {
         margin-bottom: 8px;
+    }
+    
+    .hero__image {
+        display: none;
     }
     
     .section-title {
@@ -1795,6 +1798,10 @@ body {
     .hero__subtitle {
         font-size: 14px;
         margin-bottom: 25px;
+    }
+    
+    .hero__image {
+        display: none;
     }
     
     .section-title {
