@@ -9,7 +9,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     # Админ-панель защищена JWT токеном в URL: /admin/<token>/
     # Токен генерируется командой: python manage.py generate_admin_token
-    path('admin/<str:jwt_token>/', admin.site.urls),
+    # Middleware проверяет токен и преобразует путь из /admin/<token>/ в /admin/
+    # Поэтому здесь используем стандартный паттерн
+    path('admin/', admin.site.urls),
     path('', include('landing.urls')),
 ]
 

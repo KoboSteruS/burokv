@@ -5,7 +5,6 @@ Middleware для защиты админ-панели через JWT токен
 import jwt
 from django.http import HttpResponseForbidden
 from django.conf import settings
-from django.urls import resolve
 from django.utils.deprecation import MiddlewareMixin
 
 
@@ -33,11 +32,13 @@ class AdminJWTMiddleware(MiddlewareMixin):
             return None
         
         # Извлекаем токен из URL
-        # Ожидаемый формат: /admin/<token>/
-        path_parts = request.path.strip('/').split('/')
+        # Ожидаемый формат: /admin/<token>/ или /admin/<token>
+        path_parts = [p for p in request.path.strip('/').split('/') if p]
         
         if len(path_parts) < 2 or path_parts[0] != 'admin':
-            return HttpResponseForbidden('Доступ запрещен. Требуется JWT токен в URL.')
+            # Если нет токена, возвращаем 404 (Not Found) вместо кастомного сообщения
+            from django.http import Http404
+            raise Http404('Страница не найдена')
         
         # Второй элемент должен быть токеном
         token = path_parts[1]
@@ -52,21 +53,35 @@ class AdminJWTMiddleware(MiddlewareMixin):
             
             # Проверяем тип токена
             if decoded.get('type') != 'admin_access':
-                return HttpResponseForbidden('Неверный тип токена')
+                from django.http import Http404
+                raise Http404('Страница не найдена')
             
-            # Токен валиден, разрешаем доступ
+            # Токен валиден, сохраняем в сессии для последующих запросов
+            if hasattr(request, 'session'):
+                request.session['admin_jwt_token'] = token
+                request.session['admin_jwt_valid'] = True
+            
             # Убираем токен из пути для Django admin
-            request.path = '/admin/' + ('/'.join(path_parts[2:]) if len(path_parts) > 2 else '')
-            if not request.path.endswith('/') and len(path_parts) == 2:
-                request.path += '/'
-            request.path_info = request.path
+            # Оставляем только путь после /admin/<token>/
+            remaining_path = '/'.join(path_parts[2:]) if len(path_parts) > 2 else ''
+            new_path = '/admin/' + (remaining_path + '/' if remaining_path else '')
+            
+            # Обновляем путь запроса для Django admin
+            request.path = new_path
+            request.path_info = new_path
+            request.META['PATH_INFO'] = new_path
+            # Также обновляем SCRIPT_NAME если нужно
+            if 'SCRIPT_NAME' in request.META:
+                request.META['SCRIPT_NAME'] = ''
             
             return None
             
         except jwt.ExpiredSignatureError:
-            return HttpResponseForbidden('Токен истек. Сгенерируйте новый токен.')
-        except jwt.InvalidTokenError as e:
-            return HttpResponseForbidden(f'Невалидный токен: {str(e)}')
-        except Exception as e:
-            return HttpResponseForbidden(f'Ошибка проверки токена: {str(e)}')
-
+            from django.http import Http404
+            raise Http404('Страница не найдена')
+        except jwt.InvalidTokenError:
+            from django.http import Http404
+            raise Http404('Страница не найдена')
+        except Exception:
+            from django.http import Http404
+            raise Http404('Страница не найдена')
