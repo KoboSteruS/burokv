@@ -124,9 +124,11 @@ class AdminJWTMiddleware(MiddlewareMixin):
                         # Обрабатываем query параметры
                         if '?' in admin_path:
                             path_part, query_part = admin_path.split('?', 1)
-                            response.url = f'/admin/{session_token}/{path_part}?{query_part}'
+                            new_url = f'/admin/{session_token}/{path_part}?{query_part}'
                         else:
-                            response.url = f'/admin/{session_token}/{admin_path}'
+                            new_url = f'/admin/{session_token}/{admin_path}'
+                        # Создаем новый HttpResponseRedirect с обновленным URL
+                        response = HttpResponseRedirect(new_url)
                 
                 # Обрабатываем HTML ответы (заменяем ссылки в HTML)
                 elif hasattr(response, 'content'):
