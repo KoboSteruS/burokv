@@ -6,7 +6,6 @@ import jwt
 from django.http import Http404, HttpResponseRedirect
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
-from django.urls import reverse
 
 
 class AdminJWTMiddleware(MiddlewareMixin):
@@ -32,8 +31,13 @@ class AdminJWTMiddleware(MiddlewareMixin):
             # В production это должно быть обязательно настроено!
             return None
         
+        # Извлекаем токен из URL
+        # Ожидаемый формат: /admin/<token>/ или /admin/<token>
+        path_parts = [p for p in request.path.strip('/').split('/') if p]
+        has_token_in_url = len(path_parts) >= 2 and path_parts[0] == 'admin'
+        
         # Проверяем, есть ли валидный токен в сессии (для внутренних запросов админки)
-        if hasattr(request, 'session'):
+        if hasattr(request, 'session') and not has_token_in_url:
             session_token = request.session.get('admin_jwt_token')
             session_valid = request.session.get('admin_jwt_valid', False)
             
@@ -54,11 +58,7 @@ class AdminJWTMiddleware(MiddlewareMixin):
                     request.session.pop('admin_jwt_token', None)
                     request.session.pop('admin_jwt_valid', None)
         
-        # Извлекаем токен из URL
-        # Ожидаемый формат: /admin/<token>/ или /admin/<token>
-        path_parts = [p for p in request.path.strip('/').split('/') if p]
-        
-        if len(path_parts) < 2 or path_parts[0] != 'admin':
+        if not has_token_in_url:
             # Если нет токена в URL и нет валидного токена в сессии - 404
             raise Http404('Страница не найдена')
         
