@@ -3,9 +3,10 @@ Middleware для защиты админ-панели через JWT токен
 Доступ к админке возможен только по пути: /admin/<jwt_token>/
 """
 import jwt
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponseRedirect
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
+from django.urls import reverse
 
 
 class AdminJWTMiddleware(MiddlewareMixin):
@@ -31,13 +32,34 @@ class AdminJWTMiddleware(MiddlewareMixin):
             # В production это должно быть обязательно настроено!
             return None
         
+        # Проверяем, есть ли валидный токен в сессии (для внутренних запросов админки)
+        if hasattr(request, 'session'):
+            session_token = request.session.get('admin_jwt_token')
+            session_valid = request.session.get('admin_jwt_valid', False)
+            
+            if session_token and session_valid:
+                # Проверяем токен из сессии
+                try:
+                    decoded = jwt.decode(
+                        session_token,
+                        jwt_secret,
+                        algorithms=['HS256']
+                    )
+                    
+                    if decoded.get('type') == 'admin_access':
+                        # Токен из сессии валиден, разрешаем доступ
+                        return None
+                except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+                    # Токен в сессии невалиден, очищаем сессию
+                    request.session.pop('admin_jwt_token', None)
+                    request.session.pop('admin_jwt_valid', None)
+        
         # Извлекаем токен из URL
         # Ожидаемый формат: /admin/<token>/ или /admin/<token>
         path_parts = [p for p in request.path.strip('/').split('/') if p]
         
         if len(path_parts) < 2 or path_parts[0] != 'admin':
-            # Если нет токена, возвращаем 404 (Not Found) вместо кастомного сообщения
-            from django.http import Http404
+            # Если нет токена в URL и нет валидного токена в сессии - 404
             raise Http404('Страница не найдена')
         
         # Второй элемент должен быть токеном
@@ -53,13 +75,13 @@ class AdminJWTMiddleware(MiddlewareMixin):
             
             # Проверяем тип токена
             if decoded.get('type') != 'admin_access':
-                from django.http import Http404
                 raise Http404('Страница не найдена')
             
             # Токен валиден, сохраняем в сессии для последующих запросов
             if hasattr(request, 'session'):
                 request.session['admin_jwt_token'] = token
                 request.session['admin_jwt_valid'] = True
+                request.session.set_expiry(86400 * 365)  # 1 год
             
             # Убираем токен из пути для Django admin
             # Оставляем только путь после /admin/<token>/
@@ -77,11 +99,61 @@ class AdminJWTMiddleware(MiddlewareMixin):
             return None
             
         except jwt.ExpiredSignatureError:
-            from django.http import Http404
             raise Http404('Страница не найдена')
         except jwt.InvalidTokenError:
-            from django.http import Http404
             raise Http404('Страница не найдена')
         except Exception:
-            from django.http import Http404
             raise Http404('Страница не найдена')
+    
+    def process_response(self, request, response):
+        """
+        Обрабатывает ответы, добавляя токен в редиректы и ссылки админки.
+        """
+        # Если это запрос к админке и есть токен в сессии
+        if (hasattr(request, 'session') and 
+            request.path.startswith('/admin')):
+            
+            session_token = request.session.get('admin_jwt_token')
+            
+            if session_token:
+                # Обрабатываем редиректы
+                if isinstance(response, HttpResponseRedirect):
+                    if response.url.startswith('/admin/'):
+                        # Убираем /admin/ и добавляем токен
+                        admin_path = response.url[7:].lstrip('/')  # Убираем '/admin/'
+                        # Обрабатываем query параметры
+                        if '?' in admin_path:
+                            path_part, query_part = admin_path.split('?', 1)
+                            response.url = f'/admin/{session_token}/{path_part}?{query_part}'
+                        else:
+                            response.url = f'/admin/{session_token}/{admin_path}'
+                
+                # Обрабатываем HTML ответы (заменяем ссылки в HTML)
+                elif hasattr(response, 'content'):
+                    content_type = response.get('Content-Type', '')
+                    if isinstance(content_type, str) and content_type.startswith('text/html'):
+                        try:
+                            content = response.content.decode('utf-8')
+                            
+                            # Заменяем все ссылки /admin/ на /admin/<token>/
+                            import re
+                            
+                            # Функция для замены URL
+                            def replace_admin_url(match):
+                                attr = match.group(1)  # href или action
+                                path = match.group(2).lstrip('/')  # путь после /admin/
+                                return f'{attr}="/admin/{session_token}/{path}"'
+                            
+                            # Заменяем href="/admin/... и action="/admin/...
+                            content = re.sub(
+                                r'(href|action)=["\']/admin/([^"\']*)["\']',
+                                replace_admin_url,
+                                content
+                            )
+                            
+                            response.content = content.encode('utf-8')
+                        except (UnicodeDecodeError, AttributeError, KeyError):
+                            # Если не удалось обработать контент, просто пропускаем
+                            pass
+        
+        return response
