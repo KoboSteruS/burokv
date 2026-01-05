@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Новости и статьи - Бюро Квартир{% endblock %}
+
+{% block content %}
+    <!-- Articles List Section -->
+    <section class="articles-list" id="articles-list">
+        <div class="articles-list__background">
+            <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="articles-list__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h1 class="section-title">Новости и статьи</h1>
+            <p class="section-subtitle">
+                Полезные статьи и актуальные новости в сфере недвижимости.
+            </p>
+            
+            <div class="articles-list__grid">
+                {% for article in articles %}
+                <article class="article-card">
+                    <a href="{% url 'landing:article_detail' article.slug %}" class="article-card__link">
+                        {% if article.image %}
+                        <div class="article-card__background">
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}" class="article-card__bg-image">
+                            <div class="article-card__overlay"></div>
+                        </div>
+                        {% endif %}
+                        <div class="article-card__content">
+                            <h3 class="article-card__title">{{ article.title }}</h3>
+                            {% if article.short_description %}
+                            <p class="article-card__description">{{ article.short_description }}</p>
+                            {% endif %}
+                            <div class="article-card__meta">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                                </svg>
+                                <time datetime="{{ article.published_at|date:'Y-m-d' }}">
+                                    {{ article.published_at|date:"d F Y" }}
+                                </time>
+                            </div>
+                        </div>
+                    </a>
+                </article>
+                {% empty %}
+                <p class="articles-list__empty">Статьи пока не опубликованы.</p>
+                {% endfor %}
+            </div>
+            
+            {% if is_paginated %}
+            <div class="articles-list__pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn--outline">← Назад</a>
+                {% endif %}
+                
+                <span class="pagination__info">
+                    Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="btn btn--outline">Вперед →</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
+

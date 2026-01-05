@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero__background">
+            <img src="{% static 'images/HeroBG.png' %}" alt="Фон" class="hero__bg-image" onerror="this.style.display='none'">
+            <div class="hero__overlay"></div>
+        </div>
+        <div class="container">
+            <div class="hero__wrapper">
+                <div class="hero__content">
+                    <h1 class="hero__title">
+                        <span class="hero__title-line">Все операции с недвижимостью —</span>
+                        <span class="hero__title-line hero__title-line--accent">от консультации</span>
+                        <span class="hero__title-line">до регистрации</span>
+                    </h1>
+                    <div class="hero__subtitle">
+                        <p>Работаем в Петрозаводске</p>
+                        <p>и по всей Карелии.</p>
+                        <p>Бесплатное сопровождение сделки.</p>
+                    </div>
+                    <a href="#contact-form" class="btn btn--primary btn--large">Получить консультацию</a>
+                </div>
+                <div class="hero__image">
+                    <!-- Изображение здания будет добавлено через CSS или можно добавить img тег -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- About Section -->
+    <section class="about" id="about">
+        <div class="about__background">
+            <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="about__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h2 class="section-title">О компании</h2>
+            <div class="about__content">
+                <p class="about__text">
+                    Мы — агентство недвижимости «Бюро Квартир» из Петрозаводска. 
+                    Более 15 лет мы помогаем нашим клиентам выгодно покупать, продавать 
+                    и оформлять жилую и коммерческую недвижимость «под ключ». 
+                    Полный спектр услуг в одном месте. Надежно. Профессионально.
+                </p>
+                
+                <div class="about__features">
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <img src="{% static 'images/Experience.png' %}" alt="Опыт">
+                        </div>
+                        <h3 class="feature-card__title">Более 15 лет опыта</h3>
+                        <p class="feature-card__description">Работаем с 2010 года по всей Карелии</p>
+                        <a href="#" class="feature-card__link">По договоренности →</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <img src="{% static 'images/Soprovojdenie.png' %}" alt="Сопровождение">
+                        </div>
+                        <h3 class="feature-card__title">Полное юридическое сопровождение</h3>
+                        <p class="feature-card__description">Проверка, обработка, подготовка всех документов и работы.</p>
+                        <a href="#" class="feature-card__link">По договоренности →</a>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <img src="{% static 'images/Consulting.png' %}" alt="Консультации">
+                        </div>
+                        <h3 class="feature-card__title">Бесплатные консультации</h3>
+                        <p class="feature-card__description">Наш агент всегда на связи. Расскажет и подскажет</p>
+                        <a href="#" class="feature-card__link">По договоренности →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+        <!-- Team Section -->
+        <section class="team" id="team">
+            <div class="team__background">
+                <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="team__bg-image" onerror="this.style.display='none'">
+            </div>
+            <div class="container">
+                <h2 class="section-title">Наша команда</h2>
+                <p class="section-subtitle">
+                    Мы всегда на связи и готовы помочь в любом вопросе.
+                </p>
+                
+                <div class="team__grid">
+                    {% for member in team_members %}
+                    <div class="team-member">
+                        <div class="team-member__photo">
+                            <img src="{{ member.photo.url }}" alt="{{ member.name }}">
+                        </div>
+                        <h3 class="team-member__name">{{ member.name }}</h3>
+                        <p class="team-member__position">{{ member.position }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="services__background">
+            <img src="{% static 'images/DarkBG.png' %}" alt="Фон" class="services__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h2 class="section-title">Наши услуги</h2>
+            <p class="section-subtitle">
+                Выгодно покупаем, быстро сдаем и дорого продаем, жилую и коммерческую недвижимость. 
+                Полное юридическое сопровождение сделки.
+            </p>
+            
+            <div class="services__grid">
+                {% for service in services %}
+                <div class="service-card">
+                    <div class="service-card__header">
+                        <div class="service-card__icon">
+                            {% if service.icon %}
+                                <img src="{{ service.icon.url }}" alt="{{ service.title }}">
+                            {% else %}
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                            {% endif %}
+                        </div>
+                        <h3 class="service-card__title">{{ service.title }}</h3>
+                    </div>
+                    <p class="service-card__description">{{ service.description }}</p>
+                    <a href="#contact-form" class="service-card__link">По договоренности →</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Properties Section -->
+    <section class="properties" id="objects">
+        <div class="properties__background">
+            <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="properties__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h2 class="section-title">Наши примеры объектов</h2>
+            <p class="section-subtitle">
+                Недвижимость, которую мы помогли выгодно продать:
+            </p>
+            
+            <div class="properties__grid">
+                {% for property in properties %}
+                <div class="property-card">
+                    <div class="property-card__image">
+                        <img src="{{ property.image.url }}" alt="{{ property.title }}">
+                        {% if property.is_sold %}
+                        <div class="property-card__badge">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                            Продано
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="property-card__content">
+                        <h3 class="property-card__title">{{ property.title }}</h3>
+                        <p class="property-card__location">{{ property.location }}</p>
+                        <p class="property-card__price">Продана за {{ property.price|floatformat:0 }} ₽</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Articles Section -->
+    <section class="articles" id="articles">
+        <div class="articles__background">
+            <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="articles__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h2 class="section-title">Новости и статьи</h2>
+            <p class="section-subtitle">
+                Полезные статьи и актуальные новости в сфере недвижимости.
+            </p>
+            
+            <div class="articles__grid">
+                {% for article in articles %}
+                <article class="article-card">
+                    {% if article.image %}
+                    <div class="article-card__background">
+                        <img src="{{ article.image.url }}" alt="{{ article.title }}" class="article-card__bg-image">
+                        <div class="article-card__overlay"></div>
+                    </div>
+                    {% endif %}
+                    <div class="article-card__content">
+                        <h3 class="article-card__title">{{ article.title }}</h3>
+                        {% if article.short_description %}
+                        <p class="article-card__description">{{ article.short_description }}</p>
+                        {% endif %}
+                        <div class="article-card__meta">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                            </svg>
+                            <time datetime="{{ article.published_at|date:'Y-m-d' }}">
+                                {{ article.published_at|date:"d F Y" }}
+                            </time>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            
+            <div class="articles__footer">
+                <a href="{% url 'landing:articles_list' %}" class="btn btn--outline">Посмотреть все статьи →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Form Section -->
+    <section class="contact-form" id="contact-form">
+        <div class="contact-form__background">
+            <img src="{% static 'images/DarkBG.png' %}" alt="Фон" class="contact-form__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <h2 class="section-title">Оставить заявку</h2>
+            <div class="contact-form__wrapper">
+                <div class="contact-form__map">
+                    <div id="yandex-map" class="yandex-map"></div>
+                </div>
+                <form class="form" method="post" action="#">
+                    {% csrf_token %}
+                    <div class="form__row">
+                        <div class="form__group">
+                            <input type="text" name="name" placeholder="Ваше имя" required>
+                        </div>
+                        <div class="form__group">
+                            <input type="tel" name="phone" placeholder="Телефон" required>
+                        </div>
+                    </div>
+                    <div class="form__group">
+                        <textarea name="message" placeholder="Сообщение" rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--large">Отправить заявку</button>
+                </form>
+            </div>
+        </div>
+    </section>
+    
+    <script type="text/javascript">
+        ymaps.ready(function () {
+            var myMap = new ymaps.Map('yandex-map', {
+                center: [61.790324, 34.363052],
+                zoom: 16,
+                controls: ['zoomControl', 'fullscreenControl']
+            }, {
+                searchControlProvider: 'yandex#search'
+            });
+            
+            var myPlacemark = new ymaps.Placemark([61.790324, 34.363052], {
+                balloonContent: 'Бюро Квартир<br>г. Петрозаводск, пр. Ленина, 20, офис 304'
+            }, {
+                preset: 'islands#orangeDotIcon'
+            });
+            
+            myMap.geoObjects.add(myPlacemark);
+        });
+    </script>
+{% endblock %}
+

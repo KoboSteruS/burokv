@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ article.title }} - Бюро Квартир{% endblock %}
+
+{% block content %}
+    <!-- Article Detail Section -->
+    <article class="article-detail" id="article-detail">
+        <div class="article-detail__background">
+            <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="article-detail__bg-image" onerror="this.style.display='none'">
+        </div>
+        <div class="container">
+            <div class="article-detail__header">
+                <a href="{% url 'landing:articles_list' %}" class="article-detail__back">
+                    ← Вернуться к статьям
+                </a>
+                <div class="article-detail__meta">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                    </svg>
+                    <time datetime="{{ article.published_at|date:'Y-m-d' }}">
+                        {{ article.published_at|date:"d F Y" }}
+                    </time>
+                </div>
+            </div>
+            
+            {% if article.image %}
+            <div class="article-detail__image">
+                <img src="{{ article.image.url }}" alt="{{ article.title }}">
+            </div>
+            {% endif %}
+            
+            <div class="article-detail__content">
+                <h1 class="article-detail__title">{{ article.title }}</h1>
+                
+                {% if article.short_description %}
+                <p class="article-detail__description">{{ article.short_description }}</p>
+                {% endif %}
+                
+                <div class="article-detail__text">
+                    {{ article.content|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </article>
+{% endblock %}
+
