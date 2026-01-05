@@ -7,6 +7,7 @@ from django.http import Http404, HttpResponseRedirect, HttpResponse
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 import re
+import urllib.parse
 
 
 class AdminJWTMiddleware(MiddlewareMixin):
@@ -15,6 +16,14 @@ class AdminJWTMiddleware(MiddlewareMixin):
     
     Если токен отсутствует или невалиден, доступ запрещается.
     """
+    
+    def _is_jwt_token(self, token_str):
+        """Проверяет, является ли строка JWT токеном"""
+        if not token_str:
+            return False
+        # JWT токен имеет формат: header.payload.signature (3 части, разделенные точками)
+        parts = token_str.split('.')
+        return len(parts) == 3 and len(token_str) > 50
     
     def process_request(self, request):
         """
@@ -121,19 +130,61 @@ class AdminJWTMiddleware(MiddlewareMixin):
                 if isinstance(response, HttpResponseRedirect):
                     redirect_url = response.url
                     
-                    # Если редирект на /admin/ или начинается с /admin/
-                    if redirect_url.startswith('/admin/'):
-                        # Убираем /admin/ и добавляем токен
-                        admin_path = redirect_url[7:].lstrip('/')  # Убираем '/admin/'
-                        # Обрабатываем query параметры
+                    # Проверяем, не содержит ли уже редирект токен
+                    if '/admin/' in redirect_url:
+                        parts = redirect_url.split('/admin/')
+                        if len(parts) >= 2:
+                            # Проверяем, является ли следующий элемент токеном
+                            potential_token = parts[1].split('/')[0].split('?')[0]
+                            if self._is_jwt_token(potential_token):
+                                # Уже содержит токен, не обрабатываем повторно
+                                pass
+                            else:
+                                # Обрабатываем редирект
+                                if redirect_url.startswith('/admin/'):
+                                    admin_path = redirect_url[7:].lstrip('/')
+                                    if '?' in admin_path:
+                                        path_part, query_part = admin_path.split('?', 1)
+                                        # Обрабатываем параметр next
+                                        params = urllib.parse.parse_qs(query_part)
+                                        if 'next' in params:
+                                            next_url = params['next'][0]
+                                            # Декодируем URL если нужно
+                                            next_url = urllib.parse.unquote(next_url)
+                                            # Если next указывает на /admin/, проверяем и добавляем токен
+                                            if next_url.startswith('/admin/'):
+                                                next_path = next_url[7:].lstrip('/')
+                                                # Проверяем, нет ли уже токена в next
+                                                next_parts = next_path.split('/')
+                                                if not (len(next_parts) > 0 and self._is_jwt_token(next_parts[0])):
+                                                    # Нет токена, добавляем
+                                                    next_url = f'/admin/{session_token}/{next_path}'
+                                                    params['next'] = [next_url]
+                                            query_part = urllib.parse.urlencode(params, doseq=True)
+                                        new_url = f'/admin/{session_token}/{path_part}?{query_part}'
+                                    else:
+                                        new_url = f'/admin/{session_token}/{admin_path}'
+                                    response = HttpResponseRedirect(new_url)
+                    elif redirect_url.startswith('/admin/'):
+                        # Обычный редирект на /admin/ без токена
+                        admin_path = redirect_url[7:].lstrip('/')
                         if '?' in admin_path:
                             path_part, query_part = admin_path.split('?', 1)
+                            # Обрабатываем параметр next
+                            params = urllib.parse.parse_qs(query_part)
+                            if 'next' in params:
+                                next_url = urllib.parse.unquote(params['next'][0])
+                                if next_url.startswith('/admin/'):
+                                    next_path = next_url[7:].lstrip('/')
+                                    next_parts = next_path.split('/')
+                                    if not (len(next_parts) > 0 and self._is_jwt_token(next_parts[0])):
+                                        next_url = f'/admin/{session_token}/{next_path}'
+                                        params['next'] = [next_url]
+                                query_part = urllib.parse.urlencode(params, doseq=True)
                             new_url = f'/admin/{session_token}/{path_part}?{query_part}'
                         else:
                             new_url = f'/admin/{session_token}/{admin_path}'
-                        # Создаем новый HttpResponseRedirect с обновленным URL
                         response = HttpResponseRedirect(new_url)
-                    # Если редирект на /admin (без слэша) - тоже обрабатываем
                     elif redirect_url == '/admin':
                         response = HttpResponseRedirect(f'/admin/{session_token}/')
                 
@@ -152,24 +203,44 @@ class AdminJWTMiddleware(MiddlewareMixin):
                                 return f'{attr}="/admin/{session_token}/{path}"'
                             
                             # Заменяем все ссылки на админку:
-                            # 1. href="/admin/... и action="/admin/...
+                            # 1. href="/admin/... и action="/admin/... (но не если уже есть токен)
+                            def replace_if_no_token(match):
+                                attr = match.group(1)
+                                path = match.group(2).lstrip('/')
+                                # Проверяем, нет ли уже токена в пути
+                                path_parts = path.split('/')
+                                if len(path_parts) > 0 and self._is_jwt_token(path_parts[0]):
+                                    # Уже есть токен, не заменяем
+                                    return match.group(0)
+                                return f'{attr}="/admin/{session_token}/{path}"'
+                            
                             content = re.sub(
                                 r'(href|action)=["\']/admin/([^"\']*)["\']',
-                                replace_admin_url,
+                                replace_if_no_token,
                                 content
                             )
                             
                             # 2. data-url="/admin/... (для AJAX запросов)
                             content = re.sub(
                                 r'(data-url|data-href|data-action)=["\']/admin/([^"\']*)["\']',
-                                replace_admin_url,
+                                replace_if_no_token,
                                 content
                             )
                             
-                            # 3. В JavaScript коде: "/admin/...
+                            # 3. В JavaScript коде: "/admin/... (но не если уже есть токен)
+                            def replace_js_url(match):
+                                url = match.group(1)
+                                if url.startswith('/admin/'):
+                                    path = url[7:].lstrip('/')
+                                    path_parts = path.split('/')
+                                    if len(path_parts) > 0 and self._is_jwt_token(path_parts[0]):
+                                        return match.group(0)
+                                    return f'"/admin/{session_token}/{path}"'
+                                return match.group(0)
+                            
                             content = re.sub(
                                 r'["\'](/admin/[^"\']*)["\']',
-                                lambda m: f'"/admin/{session_token}/{m.group(1)[7:].lstrip("/")}"',
+                                replace_js_url,
                                 content
                             )
                             
@@ -185,10 +256,6 @@ class AdminJWTMiddleware(MiddlewareMixin):
                                         f'action="/admin/{session_token}/{path_after_admin}"',
                                         content
                                     )
-                            
-                            # 5. Обрабатываем CSRF токен в формах (может содержать ссылки)
-                            # Django admin использует {% url %} теги, которые уже обработаны,
-                            # но на всякий случай проверяем все относительные пути
                             
                             response.content = content.encode('utf-8')
                         except (UnicodeDecodeError, AttributeError, KeyError, Exception):
