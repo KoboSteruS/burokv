@@ -110,17 +110,19 @@ class AdminJWTMiddleware(MiddlewareMixin):
         Обрабатывает ответы, добавляя токен в редиректы и ссылки админки.
         """
         # Если это запрос к админке и есть токен в сессии
-        if (hasattr(request, 'session') and 
-            request.path.startswith('/admin')):
-            
+        if hasattr(request, 'session'):
             session_token = request.session.get('admin_jwt_token')
             
             if session_token:
-                # Обрабатываем редиректы
+                # Обрабатываем редиректы (включая редиректы после логина)
                 if isinstance(response, HttpResponseRedirect):
-                    if response.url.startswith('/admin/'):
+                    # Проверяем, является ли это редиректом на админку
+                    redirect_url = response.url
+                    
+                    # Если редирект на /admin/ или начинается с /admin/
+                    if redirect_url.startswith('/admin/'):
                         # Убираем /admin/ и добавляем токен
-                        admin_path = response.url[7:].lstrip('/')  # Убираем '/admin/'
+                        admin_path = redirect_url[7:].lstrip('/')  # Убираем '/admin/'
                         # Обрабатываем query параметры
                         if '?' in admin_path:
                             path_part, query_part = admin_path.split('?', 1)
@@ -129,9 +131,13 @@ class AdminJWTMiddleware(MiddlewareMixin):
                             new_url = f'/admin/{session_token}/{admin_path}'
                         # Создаем новый HttpResponseRedirect с обновленным URL
                         response = HttpResponseRedirect(new_url)
+                    # Если редирект на /admin (без слэша) - тоже обрабатываем
+                    elif redirect_url == '/admin':
+                        response = HttpResponseRedirect(f'/admin/{session_token}/')
                 
-                # Обрабатываем HTML ответы (заменяем ссылки в HTML)
-                elif hasattr(response, 'content'):
+                # Обрабатываем HTML ответы (только для запросов к админке)
+                elif (request.path.startswith('/admin') and 
+                      hasattr(response, 'content')):
                     content_type = response.get('Content-Type', '')
                     if isinstance(content_type, str) and content_type.startswith('text/html'):
                         try:
