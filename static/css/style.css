@@ -1312,6 +1312,16 @@ body {
     transition: transform 0.3s ease;
 }
 
+@media (min-width: 1025px) {
+    .mobile-menu {
+        display: none !important;
+    }
+    
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+}
+
 .mobile-menu.active {
     transform: translateX(0);
 }
@@ -1345,6 +1355,17 @@ body {
     display: flex;
     gap: 15px;
     margin-bottom: 30px;
+}
+
+/* Скрываем мобильное меню на desktop */
+@media (min-width: 1025px) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+    
+    .mobile-menu {
+        display: none !important;
+    }
 }
 
 /* ============================================
