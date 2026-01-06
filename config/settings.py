@@ -25,10 +25,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-please-change-this-key')
 
-# JWT Secret для защиты админ-панели
-# Генерируйте уникальный ключ: python -c "import secrets; print(secrets.token_urlsafe(32))"
-ADMIN_JWT_SECRET = config('ADMIN_JWT_SECRET', default=None)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default='True', cast=bool)
 
@@ -70,7 +66,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.admin_jwt_middleware.AdminJWTMiddleware',  # Защита админ-панели через JWT
 ]
 
 ROOT_URLCONF = 'config.urls'
