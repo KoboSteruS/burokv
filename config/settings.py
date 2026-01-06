@@ -182,6 +182,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
+# Telegram Bot settings
+TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='8207875811:AAHvVUzVB8IZ5gBdTTSaak-6CWMH7pD_cqI')
+# Если указан TELEGRAM_CHAT_ID, сообщения будут отправляться в этот чат/группу/канал
+# Если не указан, будет использоваться broadcast (отправка всем, кто писал боту)
+TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default=None)
+
 # Logging
 LOGGING = {
     'version': 1,

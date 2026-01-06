@@ -145,7 +145,7 @@
             <img src="{% static 'images/LightBG.png' %}" alt="Фон" class="properties__bg-image" onerror="this.style.display='none'">
         </div>
         <div class="container">
-            <h2 class="section-title">Наши примеры объектов</h2>
+            <h2 class="section-title">Наша база объектов</h2>
             <p class="section-subtitle">
                 Недвижимость, которую мы помогли выгодно продать:
             </p>
@@ -230,8 +230,17 @@
                 <div class="contact-form__map">
                     <div id="yandex-map" class="yandex-map"></div>
                 </div>
-                <form class="form" method="post" action="#">
+                <form class="form" method="post" action="{% url 'landing:index' %}#contact-form">
                     {% csrf_token %}
+                    {% if messages %}
+                        <div class="form__messages">
+                            {% for message in messages %}
+                                <div class="form__message form__message--{{ message.tags }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                     <div class="form__row">
                         <div class="form__group">
                             <input type="text" name="name" placeholder="Ваше имя" required>

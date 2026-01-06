@@ -1131,6 +1131,42 @@ body {
     color: var(--color-text-muted);
 }
 
+.form__messages {
+    margin-bottom: 20px;
+}
+
+.form__message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-family: var(--font-main);
+}
+
+.form__message--success {
+    background-color: rgba(76, 175, 80, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.5);
+    color: #4caf50;
+}
+
+.form__message--error {
+    background-color: rgba(244, 67, 54, 0.2);
+    border: 1px solid rgba(244, 67, 54, 0.5);
+    color: #f44336;
+}
+
+.form__message--warning {
+    background-color: rgba(255, 152, 0, 0.2);
+    border: 1px solid rgba(255, 152, 0, 0.5);
+    color: #ff9800;
+}
+
+.form__message--info {
+    background-color: rgba(33, 150, 243, 0.2);
+    border: 1px solid rgba(33, 150, 243, 0.5);
+    color: #2196f3;
+}
+
 /* ============================================
    Footer
    ============================================ */
