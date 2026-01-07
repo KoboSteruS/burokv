@@ -14,7 +14,8 @@ echo Активация виртуального окружения...
 call venv\Scripts\activate.bat
 
 echo Установка зависимостей...
-pip install -r requirements.txt
+python -m pip install --upgrade pip "setuptools<81" wheel
+python -m pip install -r requirements.txt
 
 echo Применение миграций...
 python manage.py migrate

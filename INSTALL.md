@@ -67,6 +67,8 @@ python manage.py runserver
    SECRET_KEY=ваш-секретный-ключ
    DEBUG=True
    ALLOWED_HOSTS=localhost,127.0.0.1
+   TELEGRAM_BOT_TOKEN=   # опционально, если нужен Telegram
+   TELEGRAM_POLLING_ENABLED=False
    ```
 
 2. **Создайте суперпользователя** для доступа к админ-панели:
@@ -115,10 +117,33 @@ python manage.py runserver
 ### Ошибка импорта модулей
 Убедитесь, что все приложения правильно установлены в `INSTALLED_APPS` в `config/settings.py`
 
+### Ошибка `ModuleNotFoundError: No module named 'pkg_resources'`
+На Python 3.12 в виртуальном окружении может отсутствовать `setuptools` (а `pkg_resources` находится именно там).
+
+Решение:
+```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+```
+
 ### Ошибка статических файлов
 Выполните:
 ```bash
 python manage.py collectstatic --noinput
+```
+
+### Ошибка `OperationalError: no such table ...`
+Это означает, что миграции не применены (обычно на новом ПК или если удалили `db.sqlite3`).
+
+Решение:
+```bash
+python manage.py migrate
+```
+
+Если миграции “не видятся” (редко), выполните:
+```bash
+python manage.py makemigrations
+python manage.py migrate
 ```
 
 ### Ошибка миграций

@@ -183,10 +183,16 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # Telegram Bot settings
-TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='8207875811:AAHvVUzVB8IZ5gBdTTSaak-6CWMH7pD_cqI')
+# Важно: токен не должен быть захардкожен в репозитории. Храним только в .env / переменных окружения.
+TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN', default='')
 # Если указан TELEGRAM_CHAT_ID, сообщения будут отправляться в этот чат/группу/канал
 # Если не указан, будет использоваться broadcast (отправка всем, кто писал боту)
 TELEGRAM_CHAT_ID = config('TELEGRAM_CHAT_ID', default=None)
+
+# Включение фонового polling'а (getUpdates). По умолчанию выключено, чтобы:
+# - не спамить ошибками 409 (Conflict) при autoreload/runserver
+# - не делать внешние вызовы к Telegram без явного решения разработчика
+TELEGRAM_POLLING_ENABLED = config('TELEGRAM_POLLING_ENABLED', default='False', cast=bool)
 
 # Logging
 LOGGING = {

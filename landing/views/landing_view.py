@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.db.utils import OperationalError, ProgrammingError
 from loguru import logger
 
 from landing.models import Service, Property, Article, TeamMember, Application
@@ -32,18 +33,32 @@ class LandingView(TemplateView):
             dict: Контекст с данными для отображения на главной странице
         """
         context = super().get_context_data(**kwargs)
-        
-        # Получаем активные услуги, отсортированные по порядку
-        context['services'] = Service.objects.filter(is_active=True).order_by('order', 'created_at')
-        
-        # Получаем активных членов команды, отсортированных по порядку
-        context['team_members'] = TeamMember.objects.filter(is_active=True).order_by('order', 'created_at')
-        
-        # Получаем активные объекты недвижимости, отсортированные по порядку
-        context['properties'] = Property.objects.filter(is_active=True).order_by('order', '-created_at')[:3]
-        
-        # Получаем опубликованные статьи, отсортированные по дате публикации
-        context['articles'] = Article.objects.filter(is_published=True).order_by('-published_at')[:3]
+
+        # Важно: при первом запуске на новом ПК БД может быть пустой/без миграций.
+        # Вместо падения страницы отдаём пустые списки и пишем понятный лог.
+        try:
+            # Получаем активные услуги, отсортированные по порядку
+            context['services'] = Service.objects.filter(is_active=True).order_by('order', 'created_at')
+
+            # Получаем активных членов команды, отсортированных по порядку
+            context['team_members'] = TeamMember.objects.filter(is_active=True).order_by('order', 'created_at')
+
+            # Получаем активные объекты недвижимости, отсортированные по порядку
+            context['properties'] = Property.objects.filter(is_active=True).order_by('order', '-created_at')[:3]
+
+            # Получаем опубликованные статьи, отсортированные по дате публикации
+            context['articles'] = Article.objects.filter(is_published=True).order_by('-published_at')[:3]
+        except (OperationalError, ProgrammingError) as e:
+            logger.warning(
+                "База данных не инициализирована или миграции не применены. "
+                "Откройте терминал и выполните: python manage.py migrate. "
+                "Техническая причина: {error}",
+                error=str(e),
+            )
+            context['services'] = Service.objects.none()
+            context['team_members'] = TeamMember.objects.none()
+            context['properties'] = Property.objects.none()
+            context['articles'] = Article.objects.none()
         
         return context
     
@@ -73,6 +88,14 @@ class LandingView(TemplateView):
                 message=message if message else None
             )
             logger.info(f'Создана новая заявка: {application}')
+        except (OperationalError, ProgrammingError) as e:
+            logger.error(
+                "Заявка не сохранена: база данных не инициализирована (нет таблиц). "
+                "Выполните миграции: python manage.py migrate. Причина: {error}",
+                error=str(e),
+            )
+            messages.error(request, 'Сервер не готов: база данных не инициализирована. Обратитесь к администратору.')
+            return redirect(reverse('landing:index') + '#contact-form')
         except Exception as e:
             logger.error(f'Ошибка создания заявки: {e}')
             messages.error(request, 'Произошла ошибка при отправке заявки. Попробуйте позже.')
